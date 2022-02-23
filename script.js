@@ -5,15 +5,42 @@ document.querySelectorAll('.changes-bar').forEach((item) => {
 });
 
 function setBarsFromInputs() {
-    let startTimeString = document.getElementById("startTime").value;
-    let maxStartTimeString = document.getElementById("maxStartTime").value;
-    let shiftHoursString = document.getElementById("shiftHours").value;
-    let hasPunch = document.getElementById("hasPunch").checked;
-    let hasPermission = document.getElementById("hasPermission").checked;
-    let permissionSchedule = document.getElementsByName("permissionSchedule");
-    let punchEntryTime = document.getElementById("punchEntryTime");
-    let punchExitTime = document.getElementById("punchExitTime");
+    const startTimeString = document.getElementById("startTime").value;
+    const maxStartTimeString = document.getElementById("maxStartTime").value;
+    const shiftHoursString = document.getElementById("shiftHours").value;
+    const permissionSchedule = document.getElementsByName("permissionSchedule");
+    const hasPermission = document.getElementById("hasPermission").checked;
+    const hasPunch = document.getElementById("hasPunch").checked;
+    const punchEntryTime = document.getElementById("punchEntryTime");
+    const punchExitTime = document.getElementById("punchExitTime");
 
+    let [startTime, maxStartTime, shift] = getShiftDataInMinutes(
+        startTimeString, maxStartTimeString, shiftHoursString
+    );
+
+    let permissionScheduleValue = getPermissionScheduleValue(permissionSchedule);
+
+    let [assignedStartTime, assignedMaxStartTime] = getAssignedEntryRange(
+        startTime, maxStartTime, shift, hasPermission, permissionScheduleValue
+    );
+
+    let ultimateEndTime = maxStartTime + shift;
+
+    permissionSchedule.forEach(item => item.disabled = !hasPermission)
+
+    setBar("beforeEntryRangeBar", startTime, assignedStartTime,
+           startTime, ultimateEndTime);
+
+    setBar("entryRangeBar", assignedStartTime, assignedMaxStartTime,
+           startTime, ultimateEndTime);
+
+    setBar("afterEntryRangeBar", assignedMaxStartTime, ultimateEndTime,
+           startTime, ultimateEndTime);
+};
+
+
+function getShiftDataInMinutes(startTimeString, maxStartTimeString,
+                               shiftHoursString) {
     let startDT = new Date("1970-01-01 " + startTimeString);
     let startTime = 60 * startDT.getHours() + startDT.getMinutes();
 
@@ -24,47 +51,34 @@ function setBarsFromInputs() {
 
     let shift = 60 * parseFloat(shiftHoursString);
 
-    let entryRange = maxStartTime - startTime;
+    return [startTime, maxStartTime, shift]
+};
 
-    let totalRange = entryRange + shift;
 
-    let endOfTotalRange = startTime + totalRange;
-
-    let newStartTime = startTime;
-    let newMaxStartTime = maxStartTime;
-
-    let permissionScheduleChecked;
+function getPermissionScheduleValue(permissionSchedule) {
     for (var i = 0, length = permissionSchedule.length; i < length; i++) {
         if (permissionSchedule[i].checked) {
-            permissionScheduleChecked = permissionSchedule[i].value;
+            permissionScheduleValue = permissionSchedule[i].value;
             break;
         };
     };
-
-    console.log(hasPunch)
-    document.querySelectorAll("punch-time").forEach(
-        item => console.log(item)
-    );
-
-    if (hasPermission) {
-        permissionSchedule.forEach(item => item.disabled = false)
-        if (permissionScheduleChecked == "AM") {
-            newStartTime += shift / 2;
-            newMaxStartTime += shift / 2;
-    };
-    } else if (!hasPermission){
-        permissionSchedule.forEach(item => item.disabled = true);
-    };
-
-    setBar("beforeEntryRangeBar", startTime, newStartTime,
-           startTime, endOfTotalRange);
-
-    setBar("entryRangeBar", newStartTime, newMaxStartTime,
-           startTime, endOfTotalRange);
-
-    setBar("afterEntryRangeBar", newMaxStartTime, endOfTotalRange,
-           startTime, endOfTotalRange);
+    return permissionScheduleValue;
 };
+
+
+function getAssignedEntryRange(startTime, maxStartTime, shift, hasPermission,
+                               permissionScheduleValue) {
+    let assignedStartTime = startTime;
+    let assignedMaxStartTime = maxStartTime;
+
+    if (hasPermission && permissionScheduleValue == "AM") {
+        assignedStartTime += shift / 2;
+        assignedMaxStartTime += shift / 2;
+    };
+
+    return [assignedStartTime, assignedMaxStartTime]
+};
+
 
 function setBar(barId, start, end, minValue, maxValue) {
     bar = document.getElementById(barId);
@@ -73,9 +87,10 @@ function setBar(barId, start, end, minValue, maxValue) {
     bar.setAttribute("aria-valuemax", maxValue);
     newWidthPercentage = (end - start) / (maxValue - minValue) * 100 + "%";
     bar.innerHTML = parseTimeInMinutesToTimeString(start) + " - "
-                    + parseMinutesToTimeString(end);
+                    + parseTimeInMinutesToTimeString(end);
     bar.style.width = newWidthPercentage
-}
+};
+
 
 function parseTimeInMinutesToTimeString(timeInMinutes) {
     let timeDays = Math.trunc(timeInMinutes / (24 * 60));
@@ -85,4 +100,4 @@ function parseTimeInMinutesToTimeString(timeInMinutes) {
     let timeString = String(timeHour).padStart(2, '0') + ":"
                      + String(timeMinute).padStart(2, '0');
     return timeString;
-}
+};

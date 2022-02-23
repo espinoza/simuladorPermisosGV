@@ -14,29 +14,24 @@ function setBarsFromInputs() {
     let punchEntryTime = document.getElementById("punchEntryTime");
     let punchExitTime = document.getElementById("punchExitTime");
 
-    let startTime = new Date("1970-01-01 " + startTimeString);
-    let minutesFromMidnightToStartTime = 60 * startTime.getHours()
-                                         + startTime.getMinutes();
+    let startDT = new Date("1970-01-01 " + startTimeString);
+    let startTime = 60 * startDT.getHours() + startDT.getMinutes();
 
-    let maxStartTime = new Date("1970-01-01 " + maxStartTimeString);
-    let minutesFromMidnightToMaxStartTime = 60 * maxStartTime.getHours()
-                                            + maxStartTime.getMinutes();
+    let maxStartDT = new Date("1970-01-01 " + maxStartTimeString);
+    let maxStartTime = 60 * maxStartDT.getHours() + maxStartDT.getMinutes();
 
-    if (maxStartTime < startTime) minutesFromMidnightToMaxStartTime += 24 * 60;
+    if (maxStartTime < startTime) maxStartTime += 24 * 60;
 
-    let shiftHours = parseFloat(shiftHoursString);
-    let shiftMinutes = 60 * shiftHours;
+    let shift = 60 * parseFloat(shiftHoursString);
 
-    let entryRangeMinutes = minutesFromMidnightToMaxStartTime
-                            - minutesFromMidnightToStartTime;
+    let entryRange = maxStartTime - startTime;
 
-    let totalRangeMinutes = entryRangeMinutes + shiftMinutes;
+    let totalRange = entryRange + shift;
 
-    let minutesFromMidnightToEndOfTotalRange = minutesFromMidnightToStartTime
-                                               + totalRangeMinutes;
+    let endOfTotalRange = startTime + totalRange;
 
-    let minutesFromMidnightToNewStartTime = minutesFromMidnightToStartTime;
-    let minutesFromMidnightToNewMaxStartTime = minutesFromMidnightToMaxStartTime;
+    let newStartTime = startTime;
+    let newMaxStartTime = maxStartTime;
 
     let permissionScheduleChecked;
     for (var i = 0, length = permissionSchedule.length; i < length; i++) {
@@ -54,30 +49,21 @@ function setBarsFromInputs() {
     if (hasPermission) {
         permissionSchedule.forEach(item => item.disabled = false)
         if (permissionScheduleChecked == "AM") {
-            minutesFromMidnightToNewStartTime += shiftMinutes / 2;
-            minutesFromMidnightToNewMaxStartTime += shiftMinutes / 2;
+            newStartTime += shift / 2;
+            newMaxStartTime += shift / 2;
     };
     } else if (!hasPermission){
         permissionSchedule.forEach(item => item.disabled = true);
     };
 
-    setBar("beforeEntryRangeBar",
-           minutesFromMidnightToStartTime,
-           minutesFromMidnightToNewStartTime,
-           minutesFromMidnightToStartTime,
-           minutesFromMidnightToEndOfTotalRange);
+    setBar("beforeEntryRangeBar", startTime, newStartTime,
+           startTime, endOfTotalRange);
 
-    setBar("entryRangeBar",
-           minutesFromMidnightToNewStartTime,
-           minutesFromMidnightToNewMaxStartTime,
-           minutesFromMidnightToStartTime,
-           minutesFromMidnightToEndOfTotalRange);
+    setBar("entryRangeBar", newStartTime, newMaxStartTime,
+           startTime, endOfTotalRange);
 
-    setBar("afterEntryRangeBar",
-           minutesFromMidnightToNewMaxStartTime,
-           minutesFromMidnightToEndOfTotalRange,
-           minutesFromMidnightToStartTime,
-           minutesFromMidnightToEndOfTotalRange);
+    setBar("afterEntryRangeBar", newMaxStartTime, endOfTotalRange,
+           startTime, endOfTotalRange);
 };
 
 function setBar(barId, start, end, minValue, maxValue) {
@@ -86,15 +72,16 @@ function setBar(barId, start, end, minValue, maxValue) {
     bar.setAttribute("aria-valuemin", minValue);
     bar.setAttribute("aria-valuemax", maxValue);
     newWidthPercentage = (end - start) / (maxValue - minValue) * 100 + "%";
-    bar.innerHTML = parseMinutesFromMidnightToTimeString(start) + " - "
-                    + parseMinutesFromMidnightToTimeString(end);
+    bar.innerHTML = parseTimeInMinutesToTimeString(start) + " - "
+                    + parseMinutesToTimeString(end);
     bar.style.width = newWidthPercentage
 }
 
-function parseMinutesFromMidnightToTimeString(minutesFromMidnight) {
-    let timeDays = Math.trunc(minutesFromMidnight / (24 * 60));
-    let timeHour = Math.trunc((minutesFromMidnight) / 60) - 24 * timeDays;
-    let timeMinute = minutesFromMidnight - 60 * timeHour - (24 * 60) * timeDays;
+function parseTimeInMinutesToTimeString(timeInMinutes) {
+    let timeDays = Math.trunc(timeInMinutes / (24 * 60));
+    let timeHour = Math.trunc((timeInMinutes) / 60) - 24 * timeDays;
+    let timeMinute = timeInMinutes - 60 * timeHour - (24 * 60) * timeDays;
+
     let timeString = String(timeHour).padStart(2, '0') + ":"
                      + String(timeMinute).padStart(2, '0');
     return timeString;

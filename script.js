@@ -8,11 +8,13 @@ function setBarsFromInputs() {
     const startTimeString = document.getElementById("startTime").value;
     const maxStartTimeString = document.getElementById("maxStartTime").value;
     const shiftHoursString = document.getElementById("shiftHours").value;
+
     const permissionSchedule = document.getElementsByName("permissionSchedule");
     const hasPermission = document.getElementById("hasPermission").checked;
+
     const hasPunch = document.getElementById("hasPunch").checked;
-    const punchEntryTime = document.getElementById("punchEntryTime");
-    const punchExitTime = document.getElementById("punchExitTime");
+    const punchEntryTimeString = document.getElementById("punchEntryTime").value;
+    const punchExitTimeString = document.getElementById("punchExitTime").value;
 
     let [startTime, maxStartTime, shift] = getShiftDataInMinutes(
         startTimeString, maxStartTimeString, shiftHoursString
@@ -20,22 +22,71 @@ function setBarsFromInputs() {
 
     let permissionScheduleValue = getPermissionScheduleValue(permissionSchedule);
 
-    let [assignedStartTime, assignedMaxStartTime] = getAssignedEntryRange(
-        startTime, maxStartTime, shift, hasPermission, permissionScheduleValue
-    );
+    let [assignedStartTime, assignedMaxStartTime, assignedShift] =
+        getAssignedEntryRange(startTime, maxStartTime, shift, hasPermission,
+                              permissionScheduleValue
+        );
 
     let ultimateEndTime = maxStartTime + shift;
 
     permissionSchedule.forEach(item => item.disabled = !hasPermission)
 
-    setBar("beforeEntryRangeBar", startTime, assignedStartTime,
-           startTime, ultimateEndTime);
+    let punchEntryTime, punchExitTime, delayStartTime, advanceEndTime;
+    let shiftRealStartTime = assignedMaxStartTime;
+    let shiftRealEndTime = assignedMaxStartTime + assignedShift;
 
-    setBar("entryRangeBar", assignedStartTime, assignedMaxStartTime,
-           startTime, ultimateEndTime);
+    if (hasPunch) {
+        [punchEntryTime, punchExitTime] = getPunchTime(
+            punchEntryTimeString, punchExitTimeString
+        );
 
-    setBar("afterEntryRangeBar", assignedMaxStartTime, ultimateEndTime,
-           startTime, ultimateEndTime);
+        shiftRealStartTime = Math.min(
+            Math.max(punchEntryTime, assignedStartTime), assignedMaxStartTime
+        );
+        shiftRealEndTime = shiftRealStartTime + assignedShift;
+
+        delayStartTime = Math.min(punchEntryTime, shiftRealStartTime);
+        advanceEndTime = Math.max(punchExitTime, shiftRealEndTime);
+    } else {
+        [punchEntryTime, punchExitTime, delayStartTime, advanceEndTime] =
+            [startTime, startTime, startTime, startTime];
+    };
+
+    let permissionAM = permissionScheduleValue == "AM";
+    let permitStartTime, permitEndTime, fillPermitStartTime, fillPermitEndTime;
+    if (hasPermission && permissionAM) {
+        permitStartTime = maxStartTime;
+        permitEndTime = shiftRealStartTime;
+        fillPermitStartTime = ultimateEndTime - (assignedMaxStartTime - permitEndTime);
+    } else if (hasPermission && !permissionAM) {
+        permitStartTime = shiftRealEndTime;
+        permitEndTime = permitStartTime + assignedShift;
+        fillPermitStartTime = ultimateEndTime;
+    } else {
+        permitStartTime = ultimateEndTime;
+        permitEndTime = ultimateEndTime;
+        fillPermitStartTime = ultimateEndTime;
+    }
+    fillPermitEndTime = ultimateEndTime;
+
+    let infinityTime = Math.max(ultimateEndTime + 120, hasPunch ? punchExitTime : 0);
+    let minusInfinityTime = Math.min(startTime, hasPunch ? punchEntryTime : 10000000);
+
+    setBar("beforeEntryRangeBar", minusInfinityTime, assignedStartTime, minusInfinityTime, infinityTime);
+    setBar("entryRangeBar", assignedStartTime, assignedMaxStartTime, minusInfinityTime, infinityTime);
+    setBar("afterEntryRangeBar", assignedMaxStartTime, ultimateEndTime, minusInfinityTime, infinityTime);
+
+    setBar("beforeWorkedRangeBar", minusInfinityTime, delayStartTime, minusInfinityTime, infinityTime);
+    setBar("delayRangeBar", delayStartTime, punchEntryTime, minusInfinityTime, infinityTime);
+    setBar("workedRangeBar", punchEntryTime, punchExitTime, minusInfinityTime, infinityTime);
+    setBar("advanceRangeBar", punchExitTime, advanceEndTime, minusInfinityTime, infinityTime);
+    setBar("afterWorkedRangeBar", advanceEndTime, ultimateEndTime, minusInfinityTime, infinityTime);
+
+    setBar("beforePermitBar", minusInfinityTime, permitStartTime, minusInfinityTime, infinityTime);
+    setBar("PermitBar", permitStartTime, permitEndTime, minusInfinityTime, infinityTime);
+    setBar("afterPermitBar", permitEndTime, fillPermitStartTime, minusInfinityTime, infinityTime);
+    setBar("fillPermitBar", fillPermitStartTime, fillPermitEndTime, minusInfinityTime, infinityTime);
+    setBar("afterFillPermitBar", fillPermitEndTime, ultimateEndTime, minusInfinityTime, infinityTime);
 };
 
 
@@ -56,7 +107,7 @@ function getShiftDataInMinutes(startTimeString, maxStartTimeString,
 
 
 function getPermissionScheduleValue(permissionSchedule) {
-    for (var i = 0, length = permissionSchedule.length; i < length; i++) {
+    for (var i = 0; i < permissionSchedule.length; i++) {
         if (permissionSchedule[i].checked) {
             permissionScheduleValue = permissionSchedule[i].value;
             break;
@@ -70,14 +121,29 @@ function getAssignedEntryRange(startTime, maxStartTime, shift, hasPermission,
                                permissionScheduleValue) {
     let assignedStartTime = startTime;
     let assignedMaxStartTime = maxStartTime;
+    let assignedShift = shift;
+    if (hasPermission) assignedShift /= 2;
 
     if (hasPermission && permissionScheduleValue == "AM") {
-        assignedStartTime += shift / 2;
-        assignedMaxStartTime += shift / 2;
+        assignedStartTime += assignedShift;
+        assignedMaxStartTime += assignedShift;
     };
 
-    return [assignedStartTime, assignedMaxStartTime]
+    return [assignedStartTime, assignedMaxStartTime, assignedShift]
 };
+
+
+function getPunchTime(punchEntryTimeString, punchExitTimeString) {
+    let punchEntryDT = new Date("1970-01-01 " + punchEntryTimeString);
+    let punchEntryTime = 60 * punchEntryDT.getHours() + punchEntryDT.getMinutes();
+
+    let punchExitDT = new Date("1970-01-01 " + punchExitTimeString);
+    let punchExitTime = 60 * punchExitDT.getHours() + punchExitDT.getMinutes();
+
+    if (punchExitTime < punchEntryTime) punchExitTime += 24 * 60;
+
+    return [punchEntryTime, punchExitTime]
+}
 
 
 function setBar(barId, start, end, minValue, maxValue) {

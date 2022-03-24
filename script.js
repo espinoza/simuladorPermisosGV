@@ -90,7 +90,7 @@ function setBarsFromInputs() {
 
     setBar("beforePermitBar", minusInfinityTime, clientPermitEndTime, minusInfinityTime, infinityTime);
     setBar("PermitBar", clientPermitEndTime, permitEndTime, minusInfinityTime, infinityTime);
-    setBar("afterPermitBar", permitEndTime, fillPermitStartTime, minusInfinityTime, infinityTime);
+    setBar("afterPermitBar", permitEndTime, ultimateEndTime, minusInfinityTime, infinityTime);
 
     setBar("beforeEntryRangeBarGV", minusInfinityTime, startTime, minusInfinityTime, infinityTime);
     setBar("entryRangeBarGV", startTime, maxStartTime, minusInfinityTime, infinityTime);

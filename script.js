@@ -15,6 +15,8 @@ function setBarsFromInputs() {
     const hasPunch = document.getElementById("hasPunch").checked;
     const punchEntryTimeString = document.getElementById("punchEntryTime").value;
     const punchExitTimeString = document.getElementById("punchExitTime").value;
+    const punchEntryTimeInput = document.getElementById("punchEntryTime");
+    const punchExitTimeInput = document.getElementById("punchExitTime");
 
     let [startTime, maxStartTime, shift] = getShiftDataInMinutes(
         startTimeString, maxStartTimeString, shiftHoursString
@@ -30,6 +32,8 @@ function setBarsFromInputs() {
     let ultimateEndTime = maxStartTime + shift;
 
     permissionSchedule.forEach(item => item.disabled = !hasPermission)
+    punchEntryTimeInput.disabled = !hasPunch;
+    punchExitTimeInput.disabled = !hasPunch;
 
     let punchEntryTime, punchExitTime, delayStartTime, advanceEndTime;
     let shiftRealStartTime = assignedMaxStartTime;
@@ -72,6 +76,8 @@ function setBarsFromInputs() {
     let infinityTime = Math.max(ultimateEndTime + 120, hasPunch ? punchExitTime : 0);
     let minusInfinityTime = Math.min(startTime, hasPunch ? punchEntryTime : 10000000);
 
+    let clientPermitEndTime = hasPermission ? permitEndTime - assignedShift : permitEndTime;
+
     setBar("beforeEntryRangeBar", minusInfinityTime, assignedStartTime, minusInfinityTime, infinityTime);
     setBar("entryRangeBar", assignedStartTime, assignedMaxStartTime, minusInfinityTime, infinityTime);
     setBar("afterEntryRangeBar", assignedMaxStartTime, ultimateEndTime, minusInfinityTime, infinityTime);
@@ -82,11 +88,19 @@ function setBarsFromInputs() {
     setBar("advanceRangeBar", punchExitTime, advanceEndTime, minusInfinityTime, infinityTime);
     setBar("afterWorkedRangeBar", advanceEndTime, ultimateEndTime, minusInfinityTime, infinityTime);
 
-    setBar("beforePermitBar", minusInfinityTime, permitStartTime, minusInfinityTime, infinityTime);
-    setBar("PermitBar", permitStartTime, permitEndTime, minusInfinityTime, infinityTime);
+    setBar("beforePermitBar", minusInfinityTime, clientPermitEndTime, minusInfinityTime, infinityTime);
+    setBar("PermitBar", clientPermitEndTime, permitEndTime, minusInfinityTime, infinityTime);
     setBar("afterPermitBar", permitEndTime, fillPermitStartTime, minusInfinityTime, infinityTime);
-    setBar("fillPermitBar", fillPermitStartTime, fillPermitEndTime, minusInfinityTime, infinityTime);
-    setBar("afterFillPermitBar", fillPermitEndTime, ultimateEndTime, minusInfinityTime, infinityTime);
+
+    setBar("beforeEntryRangeBarGV", minusInfinityTime, startTime, minusInfinityTime, infinityTime);
+    setBar("entryRangeBarGV", startTime, maxStartTime, minusInfinityTime, infinityTime);
+    setBar("afterEntryRangeBarGV", maxStartTime, ultimateEndTime, minusInfinityTime, infinityTime);
+
+    setBar("beforePermitBarGV", minusInfinityTime, permitStartTime, minusInfinityTime, infinityTime);
+    setBar("PermitBarGV", permitStartTime, permitEndTime, minusInfinityTime, infinityTime);
+    setBar("afterPermitBarGV", permitEndTime, fillPermitStartTime, minusInfinityTime, infinityTime);
+    setBar("fillPermitBarGV", fillPermitStartTime, fillPermitEndTime, minusInfinityTime, infinityTime);
+    setBar("afterFillPermitBarGV", fillPermitEndTime, ultimateEndTime, minusInfinityTime, infinityTime);
 };
 
 
